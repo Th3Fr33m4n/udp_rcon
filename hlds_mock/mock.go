@@ -25,11 +25,6 @@ var (
 	AckResponse = []byte{0xFF, 0xFF, 0xFF, 0xFF, 0x6C, 0x00, 0x00}
 )
 
-func connect () (net.Conn, error) {
-	server, _ := net.Pipe()
-	return server, nil
-}
-
 func Run(password string, pc net.Conn) {
 	// listen to incoming udp packets
 	defer pc.Close()
@@ -42,36 +37,36 @@ func Run(password string, pc net.Conn) {
 			continue
 		}
 		buf = buf[:n]
-		fmt.Println(fmt.Sprintf("Client sent this payload to HLDS: %v", buf))
+		fmt.Printf("Client sent this payload to HLDS: %v\n", buf)
 		if bytes.HasPrefix(buf, CommandQuit) {
 			fmt.Println("HLDS mock handler shutting down...")
 			break
 		} else {
-			go serve(pc, buf[:n])
+			go serve(pc, buf)
 		}
 	}
 }
 
 func serve(pc net.Conn, buf []byte) {
 	if bytes.HasPrefix(buf, ChallengeRequest) {
-		fmt.Println(fmt.Sprintf("Client asked for new challenge. Replying: %v", ChallengeResponse))
+		fmt.Printf("Client asked for new challenge. Replying: %v\n", ChallengeResponse)
 		pc.Write(ChallengeResponse)
 	} else {
 		cmdMsg := make([]byte, 0, len(CommandExecutionRequest) + len(RconPasswordMock))
 		cmdMsg = append(cmdMsg, CommandExecutionRequest...)
 		if !bytes.HasPrefix(buf, cmdMsg) {
-			fmt.Println(fmt.Sprintf("Client didn't send a challenge. Replying: %v", NoChallengeMessage))
+			fmt.Printf("Client didn't send a challenge. Replying: %v\n", NoChallengeMessage)
 			pc.Write(NoChallengeMessage)
 			return
 		}
 		cmdMsg = append(cmdMsg, ' ')
 		cmdMsg = append(cmdMsg, RconPasswordMock...)
 		if !bytes.HasPrefix(buf, cmdMsg) {
-			fmt.Println(fmt.Sprintf("Client sent a wrong password. Replying: %v", InvalidPasswordResponse))
+			fmt.Printf("Client sent a wrong password. Replying: %v\n", InvalidPasswordResponse)
 			pc.Write(InvalidPasswordResponse)
 			return
 		}
-		fmt.Println(fmt.Sprintf("Client sent a command. Replying: %v", AckResponse))
+		fmt.Printf("Client sent a command. Replying: %v\n", AckResponse)
 		pc.Write(AckResponse)
 	}
 }

@@ -3,7 +3,7 @@ package rcon
 import "errors"
 
 var (
-	ChallengeRequiredError = errors.New("Challenge required for this server.")
-	InvalidPasswordError = errors.New("RCON password provided is invalid.")
-	InvalidChallengeResponseError = errors.New("Server sent an invalid response for challenge request.")
+	ErrChallengeRequired        = errors.New("challenge required for this server")
+	ErrInvalidPassword          = errors.New("RCON password provided is invalid")
+	ErrInvalidChallengeResponse = errors.New("server sent an invalid response for challenge request")
 )

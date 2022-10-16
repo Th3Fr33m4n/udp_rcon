@@ -84,6 +84,11 @@ func TestCommandExecution(t *testing.T) {
     }
 
     got, err := rcon.RunCommand("stats", 2048)
+    
+    if err != nil {
+        t.Error(err)
+    }
+
     want := hlds_mock.AckResponse
 
     if !bytes.Equal(*got, want) {
@@ -102,6 +107,11 @@ func TestInvalidPassword(t *testing.T) {
     }
 
     got, err := rcon.RunCommand("stats", 2048)
+
+    if err != nil {
+        t.Error(err)
+    }
+
     want := InvalidPasswordResponse
     
     if !bytes.Equal(*got, want) {
@@ -120,6 +130,11 @@ func TestInvalidChallenge(t *testing.T) {
     }
 
     got, err := rcon.RunCommand("stats", 2048)
+
+    if err != nil {
+        t.Error(err)
+    }
+
     want := MissingChallengeResponse
     
     if !bytes.HasPrefix(*got, want) {
