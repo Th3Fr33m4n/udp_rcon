@@ -8,19 +8,6 @@ import (
 	"time"
 )
 
-const RCON_CHALLENGE_RESPONSE_LENGTH = 31
-const RCON_CHALLENGE_LENGH = 10
-
-var (
-	MissingChallengeResponse = []byte{0xFF, 0xFF, 0xFF, 0xFF, 0x39}
-	InvalidPasswordResponse  = []byte{0xFF, 0xFF, 0xFF, 0xFF, 0x6C, 0x42, 0x61, 0x64, 0x20, 0x72, 0x63, 0x6F,
-		0x6E, 0x5F, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0x64, 0x2E, 0x0A, 0x00, 0x00}
-	AckResponse          = []byte{0xFF, 0xFF, 0xFF, 0xFF, 0x6C, 0x00, 0x00}
-	RconCommandHeader    = []byte{0xFF, 0xFF, 0xFF, 0xFF, 0x72, 0x63, 0x6f, 0x6e, 0x20}
-	RconChallengeRequest = []byte{0xff, 0xff, 0xff, 0xff, 0x63, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67,
-		0x65, 0x20, 0x72, 0x63, 0x6f, 0x6e, 0x0a, 0x00}
-)
-
 type RemoteConsole struct {
 	host         string
 	password     string
@@ -65,7 +52,7 @@ func (rc *RemoteConsole) Disconnect() error {
 
 func (rc *RemoteConsole) ValidateCredentials() error {
 	//send a generic command to test challenge and password
-	response, err := rc.RunCommand("stats", 2048)
+	response, err := rc.RunCommand("stats", 1024)
 
 	if err != nil {
 		return err
@@ -84,7 +71,7 @@ func (rc *RemoteConsole) buildCommand(cmd string) *[]byte {
 	msgLen := len(cmd) + len(RconCommandHeader) + 2
 
 	if rc.useChallenge {
-		msgLen += RCON_CHALLENGE_LENGH + 1
+		msgLen += len(rc.challenge) + 1
 	}
 
 	cmdLine := make([]byte, 0, msgLen)
@@ -92,11 +79,11 @@ func (rc *RemoteConsole) buildCommand(cmd string) *[]byte {
 
 	if rc.useChallenge {
 		cmdLine = append(cmdLine, rc.challenge...)
-		cmdLine = append(cmdLine, ' ')
+		cmdLine = append(cmdLine, RconMessageSeparator)
 	}
 
 	cmdLine = append(cmdLine, []byte(rc.password)...)
-	cmdLine = append(cmdLine, ' ')
+	cmdLine = append(cmdLine, RconMessageSeparator)
 	cmdLine = append(cmdLine, []byte(cmd)...)
 	cmdLine = append(cmdLine, 0, 0)
 	return &cmdLine
@@ -132,13 +119,15 @@ func (rc *RemoteConsole) NegociateChallenge() error {
 		return err
 	}
 
-	cmdResponse, err := rc.Receive(RCON_CHALLENGE_RESPONSE_LENGTH)
+	responseLen := len(RconChallengeResponseHeader) + RCON_CHALLENGE_LENGTH + RCON_RESPONSE_TRAILING_ZEROES
+
+	cmdResponse, err := rc.Receive(responseLen)
 
 	if err != nil {
 		return err
 	}
 
-	if len(*cmdResponse) < 29 {
+	if !bytes.HasPrefix(*cmdResponse, RconChallengeResponseHeader) {
 		return ErrInvalidChallengeResponse
 	}
 
@@ -147,7 +136,8 @@ func (rc *RemoteConsole) NegociateChallenge() error {
 }
 
 func (rc *RemoteConsole) setupChallenge(response *[]byte) {
-	rc.challenge = (*response)[19:29]
+	idx := bytes.IndexByte(*response, RconStringTerminator)
+	rc.challenge = (*response)[19:idx]
 	rc.useChallenge = true
 }
 
