@@ -10,134 +10,135 @@ import (
 )
 
 var server, client net.Conn
+
 const host = "127.0.0.1:27015"
 const password = "p455w0rd"
 
-type PipeConnector struct {}
+type PipeConnector struct{}
 
 func (cnt PipeConnector) Connect(host string, timeout time.Duration) (net.Conn, error) {
-    return client, nil
+	return client, nil
 }
 
 func serverInit() {
-    server, client = net.Pipe()
-    go hlds_mock.Run(password, server)
+	server, client = net.Pipe()
+	go hlds_mock.Run(password, server)
 }
 
 func serverStop() {
-    client.Write(hlds_mock.CommandQuit)
+	client.Write(hlds_mock.CommandQuit)
 }
 
 func TestChallengeNegociation(t *testing.T) {
-    serverInit()
-    defer serverStop()
+	serverInit()
+	defer serverStop()
 
-    rcon, err := NewRemoteConsole(host, password, false, PipeConnector{})
-    
-    if err != nil {
-        t.Error(err)
-    }
-    
-    got := *rcon.GetChallenge()
-    want := []byte{}
-    
-    if len(got) > 0 {
-        t.Errorf("got %s, want %s", got, want)
-    }
+	rcon, err := NewRemoteConsole(host, password, false, PipeConnector{})
 
-    rcon.NegociateChallenge()
+	if err != nil {
+		t.Error(err)
+	}
 
-    got = *rcon.GetChallenge()
-    want = hlds_mock.ChallengeMock
-    
-    if !bytes.Equal(got, want) {
-        t.Errorf("got %s, want %s", got, want)
-    }
+	got := *rcon.GetChallenge()
+	want := []byte{}
+
+	if len(got) > 0 {
+		t.Errorf("got %s, want %s", got, want)
+	}
+
+	rcon.NegociateChallenge()
+
+	got = *rcon.GetChallenge()
+	want = hlds_mock.ChallengeMock
+
+	if !bytes.Equal(got, want) {
+		t.Errorf("got %s, want %s", got, want)
+	}
 }
 
 func TestAutoChallengeNegociation(t *testing.T) {
-    serverInit()
-    defer serverStop()
+	serverInit()
+	defer serverStop()
 
-    rcon, err := NewRemoteConsole(host, password, true, PipeConnector{})
-    
-    if err != nil {
-        t.Error(err)
-    }
+	rcon, err := NewRemoteConsole(host, password, true, PipeConnector{})
 
-    got := *rcon.GetChallenge()
-    want := hlds_mock.ChallengeMock
-    
-    if !bytes.Equal(got, want) {
-        t.Errorf("got %s, want %s", got, want)
-    }
+	if err != nil {
+		t.Error(err)
+	}
+
+	got := *rcon.GetChallenge()
+	want := hlds_mock.ChallengeMock
+
+	if !bytes.Equal(got, want) {
+		t.Errorf("got %s, want %s", got, want)
+	}
 }
 
 func TestCommandExecution(t *testing.T) {
-    serverInit()
-    defer serverStop()
+	serverInit()
+	defer serverStop()
 
-    rcon, err := NewRemoteConsole(host, password, true, PipeConnector{})
-    
-    if err != nil {
-        t.Error(err)
-    }
+	rcon, err := NewRemoteConsole(host, password, true, PipeConnector{})
 
-    got, err := rcon.RunCommand("stats", 2048)
-    
-    if err != nil {
-        t.Error(err)
-    }
+	if err != nil {
+		t.Error(err)
+	}
 
-    want := hlds_mock.AckResponse
+	got, err := rcon.RunCommand("stats", 2048)
 
-    if !bytes.Equal(*got, want) {
-        t.Errorf("got %s, want %s", *got, want)
-    }
+	if err != nil {
+		t.Error(err)
+	}
+
+	want := hlds_mock.AckResponse
+
+	if !bytes.Equal(*got, want) {
+		t.Errorf("got %s, want %s", *got, want)
+	}
 }
 
 func TestInvalidPassword(t *testing.T) {
-    serverInit()
-    defer serverStop()
+	serverInit()
+	defer serverStop()
 
-    rcon, err := NewRemoteConsole(host, "asdasd", true, PipeConnector{})
-    
-    if err != nil {
-        t.Error(err)
-    }
+	rcon, err := NewRemoteConsole(host, "asdasd", true, PipeConnector{})
 
-    got, err := rcon.RunCommand("stats", 2048)
+	if err != nil {
+		t.Error(err)
+	}
 
-    if err != nil {
-        t.Error(err)
-    }
+	got, err := rcon.RunCommand("stats", 2048)
 
-    want := InvalidPasswordResponse
-    
-    if !bytes.Equal(*got, want) {
-        t.Errorf("got %s, want %s", *got, want)
-    }
+	if err != nil {
+		t.Error(err)
+	}
+
+	want := InvalidPasswordResponse
+
+	if !bytes.Equal(*got, want) {
+		t.Errorf("got %s, want %s", *got, want)
+	}
 }
 
 func TestInvalidChallenge(t *testing.T) {
-    serverInit()
-    defer serverStop()
+	serverInit()
+	defer serverStop()
 
-    rcon, err := NewRemoteConsole(host, password, false, PipeConnector{})
-    
-    if err != nil {
-        t.Error(err)
-    }
+	rcon, err := NewRemoteConsole(host, password, false, PipeConnector{})
 
-    got, err := rcon.RunCommand("stats", 2048)
+	if err != nil {
+		t.Error(err)
+	}
 
-    if err != nil {
-        t.Error(err)
-    }
+	got, err := rcon.RunCommand("stats", 2048)
 
-    want := MissingChallengeResponse
-    
-    if !bytes.HasPrefix(*got, want) {
-        t.Errorf("got %s, want %s", *got, want)
-    }
+	if err != nil {
+		t.Error(err)
+	}
+
+	want := MissingChallengeResponse
+
+	if !bytes.HasPrefix(*got, want) {
+		t.Errorf("got %s, want %s", *got, want)
+	}
 }
