@@ -39,7 +39,9 @@ func (rc *RemoteConsole) SetPassword(password string) {
 func (rc *RemoteConsole) Connect() error {
 	fmt.Println(rc.host)
 	conn, err := rc.connector.Connect(rc.host, time.Second)
-	rc.conn = conn
+	if err == nil {
+		rc.conn = conn
+	}
 	return err
 }
 
@@ -51,9 +53,8 @@ func (rc *RemoteConsole) Disconnect() error {
 }
 
 func (rc *RemoteConsole) ValidateCredentials() error {
-	//send a generic command to test challenge and password
+	// send a generic command to test challenge and password
 	response, err := rc.RunCommand("stats", 1024)
-
 	if err != nil {
 		return err
 	}
@@ -96,13 +97,11 @@ func (rc *RemoteConsole) RunCommand(cmd string, maxSize int) (*[]byte, error) {
 	defer rc.rwlock.Unlock()
 
 	err := rc.Send(cmdLine)
-
 	if err != nil {
 		return nil, err
 	}
 
 	cmdResponse, err := rc.Receive(maxSize)
-
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +109,7 @@ func (rc *RemoteConsole) RunCommand(cmd string, maxSize int) (*[]byte, error) {
 	return cmdResponse, nil
 }
 
-func (rc *RemoteConsole) NegociateChallenge() error {
+func (rc *RemoteConsole) NegotiateChallenge() error {
 	rc.rwlock.Lock()
 	defer rc.rwlock.Unlock()
 
@@ -119,10 +118,9 @@ func (rc *RemoteConsole) NegociateChallenge() error {
 		return err
 	}
 
-	responseLen := len(RconChallengeResponseHeader) + RCON_CHALLENGE_LENGTH + RCON_RESPONSE_TRAILING_ZEROES
+	responseLen := len(RconChallengeResponseHeader) + CHALLENGE_LENGTH + RESPONSE_TRAILING_ZEROES
 
 	cmdResponse, err := rc.Receive(responseLen)
-
 	if err != nil {
 		return err
 	}
@@ -143,18 +141,22 @@ func (rc *RemoteConsole) setupChallenge(response *[]byte) {
 
 func (rc *RemoteConsole) Send(msg *[]byte) error {
 	err := rc.conn.SetWriteDeadline(time.Now().Add(time.Second * 2))
-	if err == nil  {
-		_, err = rc.conn.Write(*msg)
+	if err != nil {
+		return err
 	}
+
+	_, err = rc.conn.Write(*msg)
 	return err
 }
 
 func (rc *RemoteConsole) Receive(len int) (*[]byte, error) {
-	rc.conn.SetReadDeadline(time.Now().Add(time.Second * 2))
+	err := rc.conn.SetReadDeadline(time.Now().Add(time.Second * 2))
+	if err != nil {
+		return nil, err
+	}
 
 	cmdResponse := make([]byte, len)
 	n, err := rc.conn.Read(cmdResponse)
-
 	if err != nil {
 		return nil, err
 	}
@@ -164,10 +166,13 @@ func (rc *RemoteConsole) Receive(len int) (*[]byte, error) {
 
 func NewRemoteConsole(host, password string, useChallenge bool, connector Connector) (*RemoteConsole, error) {
 	rc := RemoteConsole{host: host, password: password, rwlock: sync.Mutex{}, useChallenge: useChallenge, connector: connector}
-	rc.Connect()
+	err := rc.Connect()
+	if err != nil {
+		return nil, err
+	}
 
 	if useChallenge {
-		rc.NegociateChallenge()
+		rc.NegotiateChallenge()
 	}
 
 	return &rc, nil

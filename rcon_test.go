@@ -11,8 +11,10 @@ import (
 
 var server, client net.Conn
 
-const host = "127.0.0.1:27015"
-const password = "p455w0rd"
+const (
+	host     = "127.0.0.1:27015"
+	password = "p455w0rd"
+)
 
 type PipeConnector struct{}
 
@@ -34,7 +36,6 @@ func TestChallengeNegociation(t *testing.T) {
 	defer serverStop()
 
 	rcon, err := NewRemoteConsole(host, password, false, PipeConnector{})
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -46,7 +47,7 @@ func TestChallengeNegociation(t *testing.T) {
 		t.Errorf("got %s, want %s", got, want)
 	}
 
-	rcon.NegociateChallenge()
+	rcon.NegotiateChallenge()
 
 	got = *rcon.GetChallenge()
 	want = hlds_mock.ChallengeMock
@@ -56,12 +57,11 @@ func TestChallengeNegociation(t *testing.T) {
 	}
 }
 
-func TestAutoChallengeNegociation(t *testing.T) {
+func TestAutoChallengeNegotiation(t *testing.T) {
 	serverInit()
 	defer serverStop()
 
 	rcon, err := NewRemoteConsole(host, password, true, PipeConnector{})
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -79,13 +79,11 @@ func TestCommandExecution(t *testing.T) {
 	defer serverStop()
 
 	rcon, err := NewRemoteConsole(host, password, true, PipeConnector{})
-
 	if err != nil {
 		t.Error(err)
 	}
 
 	got, err := rcon.RunCommand("stats", 2048)
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -102,13 +100,11 @@ func TestInvalidPassword(t *testing.T) {
 	defer serverStop()
 
 	rcon, err := NewRemoteConsole(host, "asdasd", true, PipeConnector{})
-
 	if err != nil {
 		t.Error(err)
 	}
 
 	got, err := rcon.RunCommand("stats", 2048)
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -125,13 +121,11 @@ func TestInvalidChallenge(t *testing.T) {
 	defer serverStop()
 
 	rcon, err := NewRemoteConsole(host, password, false, PipeConnector{})
-
 	if err != nil {
 		t.Error(err)
 	}
 
 	got, err := rcon.RunCommand("stats", 2048)
-
 	if err != nil {
 		t.Error(err)
 	}

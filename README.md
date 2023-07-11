@@ -1,2 +1,2 @@
 # udp_rcon
-Golang HLDS UDP RCON test implementation
+GoldSrc engine (HLDS) UDP RCON client implemented in go.
