@@ -142,8 +142,10 @@ func (rc *RemoteConsole) setupChallenge(response *[]byte) {
 }
 
 func (rc *RemoteConsole) Send(msg *[]byte) error {
-	rc.conn.SetWriteDeadline(time.Now().Add(time.Second * 2))
-	_, err := rc.conn.Write(*msg)
+	err := rc.conn.SetWriteDeadline(time.Now().Add(time.Second * 2))
+	if err == nil  {
+		_, err = rc.conn.Write(*msg)
+	}
 	return err
 }
 
